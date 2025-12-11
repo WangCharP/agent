@@ -1,0 +1,10 @@
+{
+    "chat.mcp.serverSampling": {
+        "agent/.vscode/mcp.json: Docs by LangChain": {
+            "allowedModels": [
+                "copilot/auto",
+                "copilot/gemini-3-pro-preview"
+            ]
+        }
+    }
+}
