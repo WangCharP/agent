@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent Pro</title>
+    <!-- 引入字体图标 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- 背景装饰 -->
+    <div class="bg-gradient"></div>
+
+    <div class="app-container">
+        <!-- 顶部通栏 -->
+        <header class="top-bar">
+            <div class="brand">
+                <div class="logo-icon"><i class="fa-solid fa-cube"></i></div>
+                <span>Neural Agent</span>
+            </div>
+            <div class="status-indicator">
+                <span>Online</span>
+                <div class="dot"></div>
+            </div>
+        </header>
+
+        <!-- 核心内容区：非对称双栏布局 -->
+        <main class="grid-layout">
+
+            <!-- 左侧：主要工作区 (占 70%) -->
+            <section class="panel glass-panel flow-panel">
+                <div class="panel-header">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span>思维链与执行日志</span>
+                </div>
+                <div class="panel-body" id="uiFlow">
+                    <div class="welcome-text">
+                        <h1>你好，我是你的智能助手。</h1>
+                        <p>请在下方输入指令，我将为你展示思考过程。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 右侧：侧边栏 (占 30%) -->
+            <aside class="sidebar-column">
+
+                <!-- 模块1：数字人 (缩小版) -->
+                <div class="panel glass-panel avatar-card">
+                    <div class="panel-header small-header">
+                        <i class="fa-solid fa-user-circle"></i> 数字分身
+                    </div>
+                    <div class="avatar-viewport" id="uiAvatar">
+                        <!-- 模拟视频流界面 -->
+                        <div class="avatar-face">
+                            <i class="fa-solid fa-face-smile"></i>
+                        </div>
+                        <div class="avatar-status">Standby</div>
+                    </div>
+                </div>
+
+                <!-- 模块2：参考资料 (占据剩余高度) -->
+                <div class="panel glass-panel ref-card">
+                    <div class="panel-header small-header">
+                        <i class="fa-solid fa-layer-group"></i> 知识库引用
+                    </div>
+                    <ul class="ref-list" id="uiRefs">
+                        <!-- 这里的空状态设计得更好看一点 -->
+                        <li class="empty-placeholder">暂无引用文档</li>
+                    </ul>
+                </div>
+
+            </aside>
+        </main>
+
+        <!-- 底部：悬浮输入框 -->
+        <footer class="input-dock">
+            <div class="input-wrapper glass-panel">
+                <input type="text" id="inpMsg" placeholder="询问任何问题..." autocomplete="off">
+                <button id="btnSend" class="send-btn">
+                    <i class="fa-solid fa-arrow-up"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script src="client.js"></script>
+</body>
+
+</html>
