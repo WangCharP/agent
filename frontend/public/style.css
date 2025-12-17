@@ -311,3 +311,239 @@ body {
         transform: translateY(0);
     }
 }
+
+/* --- 消息流优化 --- */
+
+/* 消息气泡容器 */
+.log-entry {
+    margin-bottom: 24px;
+    animation: slideIn 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 头部元数据 (Agent名字/时间) */
+.log-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-left: 4px;
+}
+
+.role-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.role-user {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.role-agent {
+    background: #ebf8ff;
+    color: #3182ce;
+}
+
+/* 内容卡片 (核心优化部分) */
+.log-content {
+    background: #fff;
+    padding: 16px 20px;
+    border-radius: 0 16px 16px 16px;
+    /* 只有左上角是直角，其余圆角 */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    font-size: 15px;
+    line-height: 1.6;
+    color: #2d3748;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* 用户气泡稍微不同 */
+.log-entry.user .log-content {
+    background: #3182ce;
+    color: #fff;
+    border-radius: 16px 0 16px 16px;
+}
+
+/* --- Markdown 内容样式 (针对 LangChain 输出优化) --- */
+
+/* 1. 模拟“思维链”容器 */
+.log-content strong {
+    color: #2b6cb0;
+    font-weight: 700;
+}
+
+/* 2. 将列表变成垂直时间轴 */
+.log-content ol,
+.log-content ul {
+    padding-left: 20px;
+    margin: 10px 0;
+    border-left: 2px solid #e2e8f0;
+    /* 左侧轴线 */
+}
+
+.log-content li {
+    position: relative;
+    padding-left: 15px;
+    margin-bottom: 8px;
+    list-style: none;
+    /* 去掉默认数字 */
+}
+
+/* 时间轴节点圆点 */
+.log-content li::before {
+    content: '';
+    position: absolute;
+    left: -26px;
+    /* 调整圆点位置到轴线上 */
+    top: 8px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #3182ce;
+}
+
+/* 正在进行的步骤动画 */
+.log-content li:last-child::before {
+    background: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
+    animation: pulse 1.5s infinite;
+}
+
+/* 代码块样式 */
+.log-content pre {
+    background: #1a202c !important;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 10px 0;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #e2e8f0;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(49, 130, 206, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(49, 130, 206, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(49, 130, 206, 0);
+    }
+}
+
+/* === 字体美化包 === */
+
+/* 1. 全局思维链内容容器 */
+.log-content {
+    /* 英文优先用 JetBrains Mono，中文回退到系统自带的高级黑体 */
+    font-family: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', monospace;
+    font-size: 14px;
+    /* 稍微调小一点点，更精致 */
+    letter-spacing: -0.3px;
+    /* 稍微收紧字间距，显得紧凑 */
+}
+
+/* 2. 针对标题 (LangChain 思考过程) */
+.log-content h3 {
+    font-family: 'Inter', 'PingFang SC', sans-serif;
+    /* 标题用无衬线体，更易读 */
+    font-weight: 700;
+    font-size: 16px;
+    color: #1a202c;
+    /* 深黑色 */
+    margin-top: 5px;
+    margin-bottom: 15px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 3. 针对列表项 (步骤 1, 2, 3...) */
+.log-content li {
+    color: #4a5568;
+    /* 步骤文字颜色改为高级灰，不要纯黑 */
+    font-weight: 500;
+    /* 稍微加粗一点点 */
+    line-height: 1.8;
+    /* 拉开行高，增加呼吸感 */
+    transition: color 0.2s;
+}
+
+/* 鼠标悬停时的效果 */
+.log-content li:hover {
+    color: #2b6cb0;
+    /* 悬停变蓝 */
+}
+
+/* 4. 优化中文与英文混排的对齐 */
+.log-content {
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ============ 提示框 Toast ============ */
+.toast-notification {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    border-radius: 12px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+    z-index: 9999;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-notification.toast-show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast-notification.toast-hide {
+    transform: translateX(120%);
+    opacity: 0;
+}
+
+.toast-success {
+    border-left: 4px solid #10b981;
+}
+
+.toast-error {
+    border-left: 4px solid #ef4444;
+}
+
+.toast-info {
+    border-left: 4px solid #3b82f6;
+}
+
+.toast-icon {
+    font-size: 18px;
+}
+
+.toast-message {
+    flex: 1;
+}

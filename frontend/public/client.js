@@ -1,3 +1,14 @@
+// 配置 Markdown 解析器
+marked.setOptions({
+    highlight: function (code, lang) {
+        if (lang && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
+        }
+        return hljs.highlightAuto(code).value;
+    },
+    breaks: true
+});
+
 const elInp = document.getElementById('inpMsg');
 const elFlow = document.getElementById('uiFlow');
 const elRefs = document.getElementById('uiRefs');
@@ -45,8 +56,12 @@ async function handleSend() {
         setAvatarState('speaking');
         setTimeout(() => setAvatarState('idle'), 3000); // 3秒后恢复待机
 
+        // 4. 显示完成提示
+        showToast('✅ 回答完毕', 'success');
+
     } catch (err) {
         appendLog('agent', `System Error: ${err.message}`);
+        showToast('❌ 请求失败', 'error');
         setAvatarState('idle');
     } finally {
         isProcessing = false;
@@ -55,38 +70,49 @@ async function handleSend() {
 
 // 日志追加函数（带打字机效果的容器）
 function appendLog(type, text) {
-    const div = document.createElement('div');
-    div.className = 'log-entry';
+    const entryDiv = document.createElement('div');
+    entryDiv.className = `log-entry ${type}`;
 
-    const meta = document.createElement('div');
-    meta.className = type === 'user' ? 'log-user' : 'log-agent';
-    meta.innerHTML = type === 'user'
-        ? `<i class="fa-regular fa-user"></i> You <span style="font-size:12px;opacity:0.5">${getTime()}</span>`
-        : `<i class="fa-solid fa-cube"></i> Agent <span style="font-size:12px;opacity:0.5">${getTime()}</span>`;
+    const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-    const content = document.createElement('div');
-    content.style.whiteSpace = 'pre-wrap';
+    // 1. 头部元数据
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'log-meta';
 
-    div.appendChild(meta);
-    div.appendChild(content);
-    elFlow.appendChild(div);
+    const roleBadge = type === 'user'
+        ? `<span class="role-badge role-user">User</span>`
+        : `<span class="role-badge role-agent">Agent</span>`;
 
-    // 简单的打字机效果
+    const icon = type === 'user'
+        ? '<i class="fa-regular fa-user"></i>'
+        : '<i class="fa-solid fa-robot"></i>';
+
+    metaDiv.innerHTML = `${icon} ${roleBadge} <span style="opacity:0.6">${timeStr}</span>`;
+
+    // 2. 内容区域
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'log-content markdown-body';
+
     if (type === 'agent') {
-        let i = 0;
-        function type() {
-            if (i < text.length) {
-                content.textContent += text.charAt(i);
-                elFlow.scrollTop = elFlow.scrollHeight;
-                i++;
-                requestAnimationFrame(type); // 极速打字
-            }
-        }
-        type();
+        // 简单优化：给思考过程加粗，使其更像标题
+        let processedText = text.replace(/(LangChain\s*思考过程[:：])/g, '\n### 🧠 $1\n');
+        // 解析 Markdown
+        contentDiv.innerHTML = marked.parse(processedText);
     } else {
-        content.textContent = text;
-        elFlow.scrollTop = elFlow.scrollHeight;
+        contentDiv.innerText = text;
     }
+
+    // 3. 插入页面
+    entryDiv.appendChild(metaDiv);
+    entryDiv.appendChild(contentDiv);
+    elFlow.appendChild(entryDiv);
+
+    elFlow.scrollTop = elFlow.scrollHeight;
+
+    // 代码高亮
+    entryDiv.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block);
+    });
 }
 
 // 更新引用列表
@@ -131,3 +157,30 @@ btnSend.addEventListener('click', handleSend);
 elInp.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleSend();
 });
+
+// 提示框函数
+function showToast(message, type = 'info') {
+    // 移除已有的 toast
+    const existing = document.querySelector('.toast-notification');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${type === 'success' ? '🎉' : type === 'error' ? '⚠️' : 'ℹ️'}</span>
+        <span class="toast-message">${message}</span>
+    `;
+    document.body.appendChild(toast);
+
+    // 触发动画
+    requestAnimationFrame(() => {
+        toast.classList.add('toast-show');
+    });
+
+    // 3秒后自动消失
+    setTimeout(() => {
+        toast.classList.remove('toast-show');
+        toast.classList.add('toast-hide');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
