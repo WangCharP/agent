@@ -48,10 +48,6 @@
 
 ### 5. 跑通后端
 
-- 我记得我下了一个.venv包, 但是下载过去路径可能错了, 可以先试试激活虚拟环境 `source .venv/bin/activate`, 通过 `which python` 查看路径是否正确 (一个指向项目的路径)
+- 在**项目根目录**运行 `python3 -m venv .venv` 创建虚拟环境
 
-- 如果是对的, 就进入后端, 运行 `python3 main.py`
-
-- 如果不对, 删掉虚拟环境, 运行 `python3 -m venv .venv` 创建虚拟环境
-
-- 使用 `source .venv/bin/activate` 激活虚拟环境, **进入后端目录**, 执行 `pip install -r requirements.txt` 下载 python 包, 在执行 `python3 main.py`
+- 使用 `source .venv/bin/activate` 激活虚拟环境, **进入后端目录**, 执行 `pip install -r requirements.txt` 下载 python 包, 再执行 `python3 main.py`
