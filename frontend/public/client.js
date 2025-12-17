@@ -1,11 +1,34 @@
-// 配置 Markdown 解析器
-marked.setOptions({
-    highlight: function (code, lang) {
-        if (lang && hljs.getLanguage(lang)) {
-            return hljs.highlight(code, { language: lang }).value;
-        }
-        return hljs.highlightAuto(code).value;
-    },
+// 1. 初始化 Mermaid
+mermaid.initialize({
+    startOnLoad: false, // 手动控制渲染
+    theme: 'default',
+    securityLevel: 'loose',
+});
+
+// 2. 配置 Marked 自定义渲染器
+const renderer = new marked.Renderer();
+
+// 重写 code 解析逻辑：支持 mermaid 和 代码高亮
+renderer.code = function (code, language) {
+    // 如果是 mermaid 图表
+    if (language === 'mermaid') {
+        return `<div class="mermaid">${code}</div>`;
+    }
+    // 其他语言使用 highlight.js
+    const validLang = !!(language && hljs.getLanguage(language));
+    const highlighted = validLang ? hljs.highlight(code, { language }).value : hljs.highlightAuto(code).value;
+    return `<pre><code class="hljs ${language}">${highlighted}</code></pre>`;
+};
+
+// 重写 table 解析逻辑：自动包裹 div 以便横向滚动
+renderer.table = function (header, body) {
+    return `<div class="table-wrapper"><table><thead>${header}</thead><tbody>${body}</tbody></table></div>`;
+};
+
+// 应用配置
+marked.use({
+    renderer: renderer,
+    gfm: true, // 开启 GitHub 风格 Markdown
     breaks: true
 });
 
@@ -16,171 +39,228 @@ const elAvatarStatus = document.querySelector('.avatar-status');
 const elAvatarIcon = document.querySelector('.avatar-face i');
 const btnSend = document.getElementById('btnSend');
 
-// 简单的状态管理
 let isProcessing = false;
 
-// 格式化当前时间
-const getTime = () => new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+// 滚动到底部
+function scrollToBottom() {
+    elFlow.scrollTo({
+        top: elFlow.scrollHeight,
+        behavior: 'smooth'
+    });
+}
 
 async function handleSend() {
     const txt = elInp.value.trim();
     if (!txt || isProcessing) return;
 
-    // 1. UI 准备
     isProcessing = true;
     elInp.value = '';
 
-    // 清除欢迎语（如果是第一次）
     const welcome = document.querySelector('.welcome-text');
     if (welcome) welcome.style.display = 'none';
 
-    // 添加用户指令日志
     appendLog('user', txt);
-
-    // 改变数字人状态
     setAvatarState('thinking');
+    elAvatarStatus.innerText = "Connecting...";
+
+    // 创建一个新的 Agent 消息容器
+    const agentContentDiv = createAgentLogEntry();
+    let fullContent = "";
 
     try {
-        // 2. 请求后端
         const res = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ msg: txt, type: 'text' })
+            body: JSON.stringify({ msg: txt })
         });
-        const data = await res.json();
 
-        // 3. 处理响应
-        if (data.flow) appendLog('agent', data.flow);
-        if (data.refs) updateRefs(data.refs);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-        setAvatarState('speaking');
-        setTimeout(() => setAvatarState('idle'), 3000); // 3秒后恢复待机
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-        // 4. 显示完成提示
+            buffer += decoder.decode(value, { stream: true });
+
+            // 处理粘包和半包
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // 保留最后一个可能不完整的块
+
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                    const json = JSON.parse(line);
+
+                    switch (json.type) {
+                        case 'status':
+                            // 显示后端的多 Agent 调度状态
+                            elAvatarStatus.innerText = json.data;
+                            setAvatarState('thinking');
+                            appendSystemLog(json.data);
+                            break;
+
+                        case 'sources':
+                            updateRefs(json.data);
+                            break;
+
+                        case 'content':
+                            setAvatarState('speaking');
+                            fullContent += json.data;
+
+                            // 实时渲染 Markdown
+                            agentContentDiv.innerHTML = marked.parse(fullContent);
+                            scrollToBottom();
+                            break;
+
+                        case 'error':
+                            showToast(`❌ ${json.data}`, 'error');
+                            fullContent += `\n\n> **System Error:** ${json.data}`;
+                            agentContentDiv.innerHTML = marked.parse(fullContent);
+                            break;
+                    }
+                } catch (e) {
+                    console.warn("JSON Parse Error (Chunk skipped):", e);
+                }
+            }
+        }
+
+        // 🔥 流结束后，触发 Mermaid 渲染 🔥
+        try {
+            await mermaid.run({
+                nodes: agentContentDiv.querySelectorAll('.mermaid')
+            });
+        } catch (err) {
+            console.warn('Mermaid rendering incomplete:', err);
+        }
+
         showToast('✅ 回答完毕', 'success');
+        setAvatarState('idle');
 
     } catch (err) {
-        appendLog('agent', `System Error: ${err.message}`);
         showToast('❌ 请求失败', 'error');
         setAvatarState('idle');
+        agentContentDiv.innerHTML += `<p style="color:red; font-weight:bold;">Network Error: ${err.message}</p>`;
     } finally {
         isProcessing = false;
+        scrollToBottom();
     }
 }
 
-// 日志追加函数（带打字机效果的容器）
+function createAgentLogEntry() {
+    const entry = document.createElement('div');
+    entry.className = `log-entry agent`;
+    // 初始光标
+    entry.innerHTML = `
+        <div class="log-meta"><i class="fa-solid fa-robot"></i> <span class="role-badge role-agent">Agent</span></div>
+        <div class="log-content markdown-body"><span class="cursor-blink">|</span></div>
+    `;
+    elFlow.appendChild(entry);
+    scrollToBottom();
+    return entry.querySelector('.log-content');
+}
+
 function appendLog(type, text) {
-    const entryDiv = document.createElement('div');
-    entryDiv.className = `log-entry ${type}`;
-
-    const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-
-    // 1. 头部元数据
-    const metaDiv = document.createElement('div');
-    metaDiv.className = 'log-meta';
-
-    const roleBadge = type === 'user'
-        ? `<span class="role-badge role-user">User</span>`
-        : `<span class="role-badge role-agent">Agent</span>`;
-
-    const icon = type === 'user'
-        ? '<i class="fa-regular fa-user"></i>'
-        : '<i class="fa-solid fa-robot"></i>';
-
-    metaDiv.innerHTML = `${icon} ${roleBadge} <span style="opacity:0.6">${timeStr}</span>`;
-
-    // 2. 内容区域
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'log-content markdown-body';
-
-    if (type === 'agent') {
-        // 简单优化：给思考过程加粗，使其更像标题
-        let processedText = text.replace(/(LangChain\s*思考过程[:：])/g, '\n### 🧠 $1\n');
-        // 解析 Markdown
-        contentDiv.innerHTML = marked.parse(processedText);
-    } else {
-        contentDiv.innerText = text;
-    }
-
-    // 3. 插入页面
-    entryDiv.appendChild(metaDiv);
-    entryDiv.appendChild(contentDiv);
-    elFlow.appendChild(entryDiv);
-
-    elFlow.scrollTop = elFlow.scrollHeight;
-
-    // 代码高亮
-    entryDiv.querySelectorAll('pre code').forEach((block) => {
-        hljs.highlightElement(block);
-    });
+    const entry = document.createElement('div');
+    entry.className = `log-entry user`;
+    entry.innerHTML = `
+        <div class="log-meta"><i class="fa-regular fa-user"></i> <span class="role-badge role-user">User</span></div>
+        <div class="log-content markdown-body">${text}</div>
+    `;
+    elFlow.appendChild(entry);
+    scrollToBottom();
 }
 
-// 更新引用列表
 function updateRefs(refs) {
-    elRefs.innerHTML = refs.map(r => `
+    if (!refs || !refs.length) {
+        // 不要清空，可能是追加的引用
+        if (elRefs.innerHTML.includes('暂无引用')) {
+            elRefs.innerHTML = '';
+        }
+    }
+
+    // 生成新的引用列表项
+    const html = refs.map(r => `
         <li>
-            <a href="${r.link}" target="_blank">
-                <div style="display:flex;justify-content:space-between">
-                    <span>${r.txt}</span>
-                    <i class="fa-solid fa-external-link-alt" style="font-size:12px;opacity:0.5"></i>
-                </div>
+            <a href="${r.url}" target="_blank" title="${r.title}">
+                <div class="ref-title">${r.title || 'Untitled'}</div>
+                <div class="ref-link"><i class="fa-solid fa-link"></i> 点击跳转</div>
             </a>
         </li>
     `).join('');
-}
 
-// 数字人状态切换视觉
-function setAvatarState(state) {
-    const icon = elAvatarIcon;
-    const label = elAvatarStatus;
-
-    if (state === 'thinking') {
-        label.innerText = 'Analyzing...';
-        label.style.color = '#fbbf24';
-        icon.className = 'fa-solid fa-brain fa-shake'; // 思考时抖动
-        icon.style.color = '#fbbf24';
-    } else if (state === 'speaking') {
-        label.innerText = 'Speaking';
-        label.style.color = '#34d399';
-        icon.className = 'fa-solid fa-microphone-lines';
-        icon.style.color = '#34d399';
+    // 追加模式，防止并行搜索覆盖
+    if (elRefs.innerHTML.includes('暂无引用')) {
+        elRefs.innerHTML = html;
     } else {
-        label.innerText = 'Standby';
-        label.style.color = '#fff';
-        icon.className = 'fa-solid fa-face-smile';
-        icon.style.color = '#a0aec0';
+        elRefs.innerHTML += html;
     }
 }
 
-// 事件绑定
+function setAvatarState(state) {
+    elAvatarIcon.className = '';
+    if (state === 'thinking') {
+        elAvatarIcon.className = 'fa-solid fa-brain fa-shake';
+        elAvatarIcon.style.color = '#fbbf24'; // 黄色
+    } else if (state === 'speaking') {
+        elAvatarIcon.className = 'fa-solid fa-microphone-lines fa-beat-fade';
+        elAvatarIcon.style.color = '#34d399'; // 绿色
+    } else {
+        // Idle
+        elAvatarStatus.innerText = 'Standby';
+        elAvatarIcon.className = 'fa-solid fa-face-smile';
+        elAvatarIcon.style.color = '#a0aec0'; // 灰色
+    }
+}
+
+function showToast(msg, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.innerText = msg;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.style.transform = 'translateX(0)';
+        toast.style.opacity = '1';
+    });
+
+    setTimeout(() => {
+        toast.style.transform = 'translateX(120%)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// 绑定事件
 btnSend.addEventListener('click', handleSend);
 elInp.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleSend();
 });
 
-// 提示框函数
-function showToast(message, type = 'info') {
-    // 移除已有的 toast
-    const existing = document.querySelector('.toast-notification');
-    if (existing) existing.remove();
+function appendSystemLog(text) {
+    // 过滤掉无意义的状态
+    if (!text || text === 'Standby') return;
 
-    const toast = document.createElement('div');
-    toast.className = `toast-notification toast-${type}`;
-    toast.innerHTML = `
-        <span class="toast-icon">${type === 'success' ? '🎉' : type === 'error' ? '⚠️' : 'ℹ️'}</span>
-        <span class="toast-message">${message}</span>
+    const entry = document.createElement('div');
+    //以此保持和你原有的 log-entry 结构一致，但内容自定义
+    entry.className = 'log-entry system';
+
+    // 这里直接写死样式，显示为灰色小字，带有终端图标
+    entry.innerHTML = `
+        <div style="
+            padding: 8px 12px; 
+            margin: 5px 0; 
+            color: #94a3b8; 
+            font-size: 0.85em; 
+            font-family: monospace; 
+            background: rgba(0,0,0,0.05); 
+            border-radius: 6px; 
+            border-left: 3px solid #3b82f6;">
+            <i class="fa-solid fa-terminal"></i> ${text}
+        </div>
     `;
-    document.body.appendChild(toast);
 
-    // 触发动画
-    requestAnimationFrame(() => {
-        toast.classList.add('toast-show');
-    });
-
-    // 3秒后自动消失
-    setTimeout(() => {
-        toast.classList.remove('toast-show');
-        toast.classList.add('toast-hide');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    elFlow.appendChild(entry);
+    scrollToBottom();
 }

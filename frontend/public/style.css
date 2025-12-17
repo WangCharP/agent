@@ -1,14 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap');
 
 :root {
-    /* 大气的高级灰/蓝配色 */
     --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    --panel-bg: rgba(255, 255, 255, 0.85);
-    --panel-border: 1px solid rgba(255, 255, 255, 0.9);
+    --panel-bg: rgba(255, 255, 255, 0.9);
     --text-primary: #2d3748;
     --text-secondary: #718096;
     --accent-color: #3182ce;
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -21,11 +18,10 @@ body {
     font-family: 'Inter', sans-serif;
     height: 100vh;
     overflow: hidden;
-    color: var(--text-primary);
     background: #eef2f6;
+    color: var(--text-primary);
 }
 
-/* 背景光效 */
 .bg-gradient {
     position: absolute;
     top: 0;
@@ -38,21 +34,23 @@ body {
 
 .app-container {
     max-width: 1800px;
-    /* 宽屏适配，更大气 */
     margin: 0 auto;
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 24px;
-    gap: 20px;
+    padding: 20px;
+    /* 底部不需要 padding，因为我们在 grid-layout 里控制了高度 */
 }
 
-/* 顶部栏 */
+/* --- 顶部栏 --- */
 .top-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0 10px;
+    height: 50px;
+    flex-shrink: 0;
+    margin-bottom: 10px;
 }
 
 .brand {
@@ -70,17 +68,16 @@ body {
     color: #fff;
     border-radius: 8px;
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
 }
 
 .status-indicator {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 14px;
-    font-weight: 500;
     color: #10b981;
+    font-weight: 500;
 }
 
 .dot {
@@ -91,29 +88,30 @@ body {
     box-shadow: 0 0 8px currentColor;
 }
 
-/* 核心 Grid 布局 */
+/* --- 核心布局 (Layout Fix) --- */
 .grid-layout {
-    flex: 1;
     display: grid;
     grid-template-columns: 1fr 380px;
-    /* 左侧自适应，右侧固定宽380px (精致) */
-    gap: 24px;
+    gap: 20px;
+
+    /* 
+       【关键修改】
+       计算高度时，减去顶部(60px) 和 底部给输入框留出的空间(100px)。
+       这样面板底部边缘会在输入框上方，两者完全不重叠！
+    */
+    height: calc(100vh - 160px);
     min-height: 0;
-    /* 防止溢出 */
-    padding-bottom: 90px;
-    /* 底部留白给输入框 */
 }
 
-/* 通用面板样式 (玻璃拟态) */
 .glass-panel {
     background: var(--panel-bg);
     backdrop-filter: blur(12px);
-    border: var(--panel-border);
     border-radius: 20px;
-    box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 .panel-header {
@@ -124,74 +122,44 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.5);
 }
 
-.small-header {
-    padding: 12px 20px;
-    font-size: 14px;
-}
-
-/* 左侧：思维流面板 */
-.flow-panel .panel-body {
+.panel-body {
     flex: 1;
     padding: 30px;
     overflow-y: auto;
     font-family: 'JetBrains Mono', monospace;
-    /* 代码风格字体 */
-    font-size: 15px;
     line-height: 1.7;
+    position: relative;
+    scroll-behavior: smooth;
+
+    /* 不需要巨大的 padding 了，因为面板本身已经变短了 */
+    padding-bottom: 20px;
 }
 
-.welcome-text h1 {
-    font-size: 28px;
-    margin-bottom: 10px;
-    letter-spacing: -0.5px;
-}
-
-.welcome-text p {
-    color: var(--text-secondary);
-}
-
-/* 日志条目样式 */
-.log-entry {
-    margin-bottom: 12px;
-    animation: slideIn 0.3s ease;
-}
-
-.log-user {
-    color: var(--accent-color);
-    font-weight: 600;
-    margin-top: 20px;
-    margin-bottom: 10px;
-}
-
-.log-agent {
-    color: var(--text-primary);
-}
-
-/* 右侧侧边栏 */
+/* --- 侧边栏 --- */
 .sidebar-column {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
+    height: 100%;
+    overflow: hidden;
 }
 
-/* 数字人卡片 (缩小优化) */
 .avatar-card {
-    height: 240px;
-    /* 固定高度，不再占满 */
+    height: 260px;
     flex-shrink: 0;
 }
 
 .avatar-viewport {
     flex: 1;
     background: #1a202c;
-    /* 深色底，突出主体 */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    position: relative;
     color: #fff;
 }
 
@@ -209,16 +177,18 @@ body {
     border-radius: 20px;
 }
 
-/* 引用卡片 */
 .ref-card {
     flex: 1;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .ref-list {
     padding: 15px;
     list-style: none;
     overflow-y: auto;
+    flex: 1;
 }
 
 .ref-list li {
@@ -226,8 +196,8 @@ body {
     background: rgba(255, 255, 255, 0.5);
     margin-bottom: 8px;
     border-radius: 12px;
+    transition: 0.2s;
     border: 1px solid transparent;
-    transition: all 0.2s;
 }
 
 .ref-list li:hover {
@@ -239,38 +209,38 @@ body {
 .ref-list a {
     text-decoration: none;
     color: var(--text-primary);
-    font-weight: 500;
-    font-size: 14px;
+    font-size: 13px;
     display: block;
 }
 
-.empty-placeholder {
-    text-align: center;
-    color: #cbd5e0;
-    padding-top: 40px;
-}
-
-/* 底部输入框 (大胶囊风格) */
+/* --- 输入框 (Input Dock) --- */
 .input-dock {
     position: fixed;
     bottom: 30px;
+    /* 悬浮在页面底部 */
     left: 0;
     right: 0;
     display: flex;
     justify-content: center;
-    z-index: 100;
+    z-index: 1000;
+    pointer-events: none;
 }
 
 .input-wrapper {
-    width: 700px;
+    width: 800px;
+    /* 稍微宽一点 */
     max-width: 90%;
     height: 64px;
     border-radius: 32px;
-    /* 全圆角 */
     padding: 6px 6px 6px 30px;
-    flex-direction: row;
+    display: flex;
     align-items: center;
-    box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.15);
+    /* 加强阴影，让它看起来更立体 */
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
+    background: #fff;
+    /* 纯白背景，避免透明造成的视觉混淆 */
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    pointer-events: auto;
 }
 
 #inpMsg {
@@ -287,11 +257,14 @@ body {
     height: 52px;
     border-radius: 50%;
     border: none;
-    background: var(--text-primary);
+    background: #2d3748;
     color: #fff;
     font-size: 18px;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .send-btn:hover {
@@ -299,36 +272,20 @@ body {
     background: #000;
 }
 
-/* 动画定义 */
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* --- 消息流优化 --- */
-
-/* 消息气泡容器 */
+/* --- 其他样式 --- */
 .log-entry {
     margin-bottom: 24px;
-    animation: slideIn 0.3s ease;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    animation: fadeIn 0.3s ease;
 }
 
-/* 头部元数据 (Agent名字/时间) */
 .log-meta {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-secondary);
     margin-left: 4px;
@@ -337,9 +294,8 @@ body {
 .role-badge {
     padding: 2px 8px;
     border-radius: 4px;
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
 .role-user {
@@ -352,198 +308,137 @@ body {
     color: #3182ce;
 }
 
-/* 内容卡片 (核心优化部分) */
 .log-content {
     background: #fff;
     padding: 16px 20px;
     border-radius: 0 16px 16px 16px;
-    /* 只有左上角是直角，其余圆角 */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     font-size: 15px;
-    line-height: 1.6;
-    color: #2d3748;
-    position: relative;
-    border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
-/* 用户气泡稍微不同 */
 .log-entry.user .log-content {
     background: #3182ce;
     color: #fff;
     border-radius: 16px 0 16px 16px;
 }
 
-/* --- Markdown 内容样式 (针对 LangChain 输出优化) --- */
-
-/* 1. 模拟“思维链”容器 */
-.log-content strong {
-    color: #2b6cb0;
-    font-weight: 700;
-}
-
-/* 2. 将列表变成垂直时间轴 */
-.log-content ol,
-.log-content ul {
-    padding-left: 20px;
-    margin: 10px 0;
-    border-left: 2px solid #e2e8f0;
-    /* 左侧轴线 */
-}
-
-.log-content li {
-    position: relative;
-    padding-left: 15px;
-    margin-bottom: 8px;
-    list-style: none;
-    /* 去掉默认数字 */
-}
-
-/* 时间轴节点圆点 */
-.log-content li::before {
-    content: '';
-    position: absolute;
-    left: -26px;
-    /* 调整圆点位置到轴线上 */
-    top: 8px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid #3182ce;
-}
-
-/* 正在进行的步骤动画 */
-.log-content li:last-child::before {
-    background: #3182ce;
-    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
-    animation: pulse 1.5s infinite;
-}
-
-/* 代码块样式 */
-.log-content pre {
-    background: #1a202c !important;
-    border-radius: 8px;
-    padding: 12px;
-    margin: 10px 0;
-    overflow-x: auto;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    color: #e2e8f0;
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(49, 130, 206, 0.4);
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
     }
 
-    70% {
-        box-shadow: 0 0 0 6px rgba(49, 130, 206, 0);
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(49, 130, 206, 0);
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* === 字体美化包 === */
-
-/* 1. 全局思维链内容容器 */
-.log-content {
-    /* 英文优先用 JetBrains Mono，中文回退到系统自带的高级黑体 */
-    font-family: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', monospace;
-    font-size: 14px;
-    /* 稍微调小一点点，更精致 */
-    letter-spacing: -0.3px;
-    /* 稍微收紧字间距，显得紧凑 */
+.cursor-blink {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background-color: var(--accent-color);
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
 }
 
-/* 2. 针对标题 (LangChain 思考过程) */
-.log-content h3 {
-    font-family: 'Inter', 'PingFang SC', sans-serif;
-    /* 标题用无衬线体，更易读 */
-    font-weight: 700;
-    font-size: 16px;
-    color: #1a202c;
-    /* 深黑色 */
-    margin-top: 5px;
-    margin-bottom: 15px;
-    letter-spacing: 0.5px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+@keyframes blink {
+    50% {
+        opacity: 0;
+    }
 }
 
-/* 3. 针对列表项 (步骤 1, 2, 3...) */
-.log-content li {
-    color: #4a5568;
-    /* 步骤文字颜色改为高级灰，不要纯黑 */
-    font-weight: 500;
-    /* 稍微加粗一点点 */
-    line-height: 1.8;
-    /* 拉开行高，增加呼吸感 */
-    transition: color 0.2s;
-}
-
-/* 鼠标悬停时的效果 */
-.log-content li:hover {
-    color: #2b6cb0;
-    /* 悬停变蓝 */
-}
-
-/* 4. 优化中文与英文混排的对齐 */
-.log-content {
-    -webkit-font-smoothing: antialiased;
-}
-
-/* ============ 提示框 Toast ============ */
 .toast-notification {
     position: fixed;
     top: 24px;
     right: 24px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
     padding: 14px 24px;
     border-radius: 12px;
-    background: var(--panel-bg);
-    backdrop-filter: blur(12px);
+    background: #fff;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--text-primary);
     z-index: 9999;
-    transform: translateX(120%);
-    opacity: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: none;
 }
 
-.toast-notification.toast-show {
-    transform: translateX(0);
-    opacity: 1;
+.toast-show {
+    display: block;
+    animation: fadeIn 0.3s;
 }
 
-.toast-notification.toast-hide {
-    transform: translateX(120%);
-    opacity: 0;
+.panel-body::-webkit-scrollbar {
+    width: 6px;
 }
 
-.toast-success {
-    border-left: 4px solid #10b981;
+.panel-body::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
 }
 
-.toast-error {
-    border-left: 4px solid #ef4444;
+.markdown-body table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 14px;
+    background-color: rgba(255, 255, 255, 0.5);
+    /* 半透明背景 */
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-.toast-info {
-    border-left: 4px solid #3b82f6;
+.markdown-body th,
+.markdown-body td {
+    border: 1px solid #cbd5e0;
+    /* 浅灰色边框 */
+    padding: 10px 14px;
+    text-align: left;
 }
 
-.toast-icon {
-    font-size: 18px;
+.markdown-body th {
+    background-color: rgba(49, 130, 206, 0.1);
+    /* 标题栏淡蓝色背景 */
+    font-weight: 600;
+    color: #2d3748;
 }
 
-.toast-message {
-    flex: 1;
+.markdown-body tr:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.02);
+    /* 隔行变色 */
+}
+
+.markdown-body tr:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* =========================================
+   🔥 新增：Mermaid 容器样式 
+   ========================================= */
+.mermaid {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 16px;
+    border-radius: 12px;
+    margin: 16px 0;
+    display: flex;
+    justify-content: center;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.log-entry.system {
+    padding: 5px 15px;
+    margin-bottom: 5px;
+    animation: fadeIn 0.3s ease;
+}
+
+.system-msg {
+    font-family: 'Consolas', monospace;
+    /* 代码字体，更有极客感 */
+    font-size: 0.85rem;
+    color: #94a3b8;
+    /* 灰色文字 */
+    border-left: 2px solid #3b82f6;
+    /* 左侧蓝色竖线 */
+    padding-left: 10px;
+    background: rgba(0, 0, 0, 0.1);
+    /* 淡淡的背景 */
+    border-radius: 0 4px 4px 0;
 }
