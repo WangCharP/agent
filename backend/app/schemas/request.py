@@ -1,5 +1,3 @@
 from pydantic import BaseModel
-
-class ChatRequest(BaseModel):
+class ResearchRequest(BaseModel):
     msg: str
-    type: str = "text"
