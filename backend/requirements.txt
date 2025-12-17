@@ -6,4 +6,4 @@ python-dotenv
 httpx
 aiofiles
 tavily-python
-oopenai
+openai
